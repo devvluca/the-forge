@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #222 transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: #222;
+    border-radius: 3px;
+  }
+
+  body {
+    @apply bg-black text-white antialiased;
+    font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+
+  :root {
+    --accent-h: 0;
+    --accent-s: 84%;
+    --accent-l: 60%;
+    --accent: hsl(var(--accent-h), var(--accent-s), var(--accent-l));
+    --accent-rgb: 239, 68, 68;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-zinc-950/50 backdrop-blur-md border border-zinc-800/50;
+  }
+
+  .glass-panel-hover {
+    @apply bg-zinc-950/50 backdrop-blur-md border border-zinc-800/50 hover:border-zinc-700/60 transition-all duration-300;
+  }
+
+  .neon-glow {
+    filter: drop-shadow(0 0 12px rgba(var(--accent-rgb), 0.8));
+    color: var(--accent);
+  }
+
+  .neon-glow-subtle {
+    filter: drop-shadow(0 0 8px rgba(var(--accent-rgb), 0.5));
+    color: var(--accent);
+  }
+
+  .neon-box-glow {
+    box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.6);
+  }
+
+  .neon-box-glow-sm {
+    box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.4);
+  }
+
+  .text-gradient-accent {
+    background: linear-gradient(135deg, var(--accent) 0%, hsl(calc(var(--accent-h) + 10), 90%, 50%) 50%, hsl(calc(var(--accent-h) - 10), 80%, 45%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Legacy alias */
+  .text-gradient-red {
+    background: linear-gradient(135deg, var(--accent) 0%, hsl(calc(var(--accent-h) + 10), 90%, 50%) 50%, hsl(calc(var(--accent-h) - 10), 80%, 45%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .bg-noise {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  }
+
+  .forge-btn-primary {
+    @apply px-6 py-3 font-bold uppercase tracking-widest text-xs rounded-sm;
+    background-color: var(--accent);
+    color: black;
+    box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.3);
+    transition: all 0.2s ease;
+  }
+
+  .forge-btn-primary:hover {
+    box-shadow: 0 0 30px rgba(var(--accent-rgb), 0.5);
+  }
+
+  .forge-btn-ghost {
+    @apply px-5 py-2.5 bg-transparent border border-zinc-800 text-zinc-400 text-xs uppercase tracking-widest rounded-sm;
+    transition: all 0.25s ease;
+  }
+
+  .forge-btn-ghost:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.15);
+  }
+
+  .text-accent {
+    color: var(--accent);
+  }
+
+  .bg-accent {
+    background-color: var(--accent);
+  }
+
+  .border-accent {
+    border-color: var(--accent);
+  }
+}

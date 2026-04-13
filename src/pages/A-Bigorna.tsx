@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Plus, Target, CaretLeft, CaretRight, TrendUp, Fire, CalendarBlank } from '@phosphor-icons/react';
+import { Check, Plus, Target, CaretLeft, CaretRight, TrendUp, Fire, CalendarBlank, Trash, X, Eraser, Warning, PencilSimple } from '@phosphor-icons/react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { supabase } from '../lib/supabase';
 
@@ -52,6 +52,24 @@ export const ABigorna = () => {
     const [time, setTime] = useState(new Date());
     const [expPopups, setExpPopups] = useState<{ id: number; x: number; y: number }[]>([]);
     let popupId = 0;
+
+    // Add discipline modal state
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [newHabitName, setNewHabitName] = useState('');
+    const [isAdding, setIsAdding] = useState(false);
+
+    // Edit discipline state
+    const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
+    const [editingHabitName, setEditingHabitName] = useState('');
+    const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+    // Remove discipline state
+    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    // Clear history state
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const [isClearing, setIsClearing] = useState(false);
 
     // Clock
     useEffect(() => {
@@ -138,6 +156,85 @@ export const ABigorna = () => {
         }
     };
 
+    // Add new discipline
+    const addHabit = async () => {
+        const trimmed = newHabitName.trim();
+        if (!trimmed || isAdding) return;
+        setIsAdding(true);
+        try {
+            const { data } = await supabase
+                .from('habits')
+                .insert({ name: trimmed, streak: 0 })
+                .select()
+                .single();
+            if (data) {
+                setAllHabits(prev => [...prev, data]);
+                setNewHabitName('');
+                setShowAddModal(false);
+            }
+        } finally {
+            setIsAdding(false);
+        }
+    };
+
+    // Edit discipline
+    const startEditing = (habit: Habit) => {
+        setEditingHabitId(habit.id);
+        setEditingHabitName(habit.name);
+        setDeleteConfirmId(null);
+    };
+
+    const saveEdit = async () => {
+        const trimmed = editingHabitName.trim();
+        if (!trimmed || !editingHabitId || isSavingEdit) return;
+        setIsSavingEdit(true);
+        try {
+            await supabase.from('habits').update({ name: trimmed }).eq('id', editingHabitId);
+            setAllHabits(prev => prev.map(h => h.id === editingHabitId ? { ...h, name: trimmed } : h));
+            setEditingHabitId(null);
+            setEditingHabitName('');
+        } finally {
+            setIsSavingEdit(false);
+        }
+    };
+
+    const cancelEdit = () => {
+        setEditingHabitId(null);
+        setEditingHabitName('');
+    };
+
+    // Remove discipline
+    const removeHabit = async (habitId: string) => {
+        if (isDeleting) return;
+        setIsDeleting(true);
+        try {
+            // Delete completions first (foreign key)
+            await supabase.from('habit_completions').delete().eq('habit_id', habitId);
+            await supabase.from('habits').delete().eq('id', habitId);
+            setAllHabits(prev => prev.filter(h => h.id !== habitId));
+            setCompletions(prev => prev.filter(c => c.habit_id !== habitId));
+            setDeleteConfirmId(null);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    // Clear all history (completions)
+    const clearHistory = async () => {
+        if (isClearing) return;
+        setIsClearing(true);
+        try {
+            const habitIds = allHabits.map(h => h.id);
+            if (habitIds.length > 0) {
+                await supabase.from('habit_completions').delete().in('habit_id', habitIds);
+            }
+            setCompletions([]);
+            setShowClearConfirm(false);
+        } finally {
+            setIsClearing(false);
+        }
+    };
+
     // Today's count
     const todayKey = toDateKey(today);
     const todayDone = completions.filter(c => c.completed_date === todayKey).length;
@@ -163,7 +260,7 @@ export const ABigorna = () => {
 
     // Build recent history from real completions
     const historyLog = useMemo(() => {
-        // Get last 3 days completions
+        // Get last 3 days completions - only show completed entries
         const last3Days = dateCols.slice(-3).reverse();
         const entries: { date: string; habit: string; status: boolean; time: string }[] = [];
         for (const d of last3Days) {
@@ -171,12 +268,14 @@ export const ABigorna = () => {
             const dateDisplay = toDisplayDate(d);
             for (const habit of allHabits) {
                 const completion = completions.find(c => c.habit_id === habit.id && c.completed_date === dateKey);
-                entries.push({
-                    date: dateDisplay,
-                    habit: habit.name,
-                    status: !!completion,
-                    time: completion ? new Date(completion.completed_at || '').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—',
-                });
+                if (completion) {
+                    entries.push({
+                        date: dateDisplay,
+                        habit: habit.name,
+                        status: true,
+                        time: '—',
+                    });
+                }
             }
         }
         return entries;
@@ -318,7 +417,86 @@ export const ABigorna = () => {
                             {allHabits.map((habit) => (
                                 <tr key={habit.id} className="border-t border-zinc-800/30 group hover:bg-white/[0.01] transition-colors">
                                     <td className="py-4 px-3">
-                                        <span className="text-sm text-zinc-400 font-sans tracking-wide group-hover:text-zinc-300 transition-colors">{habit.name}</span>
+                                        {editingHabitId === habit.id ? (
+                                            <motion.div
+                                                initial={{ opacity: 0, x: -5 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                className="flex items-center gap-2"
+                                            >
+                                                <input
+                                                    type="text"
+                                                    value={editingHabitName}
+                                                    onChange={(e) => setEditingHabitName(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') saveEdit();
+                                                        if (e.key === 'Escape') cancelEdit();
+                                                    }}
+                                                    autoFocus
+                                                    className="bg-black/40 border border-[var(--accent)]/30 rounded-md px-3 py-1.5 text-sm text-white font-sans tracking-wide focus:outline-none focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/20 transition-all w-40"
+                                                />
+                                                <button
+                                                    onClick={saveEdit}
+                                                    disabled={!editingHabitName.trim() || isSavingEdit}
+                                                    className="p-1 rounded-md text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors disabled:opacity-40"
+                                                    title="Salvar"
+                                                >
+                                                    <Check size={12} weight="bold" />
+                                                </button>
+                                                <button
+                                                    onClick={cancelEdit}
+                                                    className="p-1 rounded-md text-zinc-600 hover:text-zinc-400 transition-colors"
+                                                    title="Cancelar"
+                                                >
+                                                    <X size={12} weight="bold" />
+                                                </button>
+                                            </motion.div>
+                                        ) : (
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm text-zinc-400 font-sans tracking-wide group-hover:text-zinc-300 transition-colors">{habit.name}</span>
+                                                {deleteConfirmId === habit.id ? (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, scale: 0.8 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        className="flex items-center gap-1 ml-1"
+                                                    >
+                                                        <button
+                                                            onClick={() => removeHabit(habit.id)}
+                                                            disabled={isDeleting}
+                                                            className="px-2 py-0.5 rounded text-[9px] uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                                                        >
+                                                            {isDeleting ? '...' : 'Confirmar'}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setDeleteConfirmId(null)}
+                                                            className="p-0.5 rounded text-zinc-600 hover:text-zinc-400 transition-colors"
+                                                        >
+                                                            <X size={10} weight="bold" />
+                                                        </button>
+                                                    </motion.div>
+                                                ) : (
+                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <motion.button
+                                                            whileHover={{ scale: 1.15 }}
+                                                            whileTap={{ scale: 0.9 }}
+                                                            onClick={() => startEditing(habit)}
+                                                            className="p-1 rounded-md text-zinc-700 hover:text-[var(--accent)] hover:bg-[var(--accent)]/10"
+                                                            title="Editar disciplina"
+                                                        >
+                                                            <PencilSimple size={12} weight="bold" />
+                                                        </motion.button>
+                                                        <motion.button
+                                                            whileHover={{ scale: 1.15 }}
+                                                            whileTap={{ scale: 0.9 }}
+                                                            onClick={() => setDeleteConfirmId(habit.id)}
+                                                            className="p-1 rounded-md text-zinc-700 hover:text-red-400 hover:bg-red-500/10"
+                                                            title="Remover disciplina"
+                                                        >
+                                                            <Trash size={12} weight="bold" />
+                                                        </motion.button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </td>
                                     <td className="py-4 px-3">
                                         <span className="text-xs font-bold neon-glow">{habit.streak}d</span>
@@ -356,10 +534,33 @@ export const ABigorna = () => {
                 </div>
             </div>
 
+            <div className="mt-4 mb-6 flex gap-4">
+                <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowAddModal(true)}
+                    className="forge-btn-primary flex items-center gap-2"
+                >
+                    <Plus size={14} weight="bold" />
+                    Nova Disciplina
+                </motion.button>
+            </div>
+
             <div className="glass-panel rounded-xl p-6">
                 <div className="flex items-center justify-between mb-5">
                     <h2 className="text-[var(--accent)] uppercase tracking-[0.15em] font-bold text-xs">Histórico Recente</h2>
-                    <span className="text-[9px] text-zinc-600 tracking-widest uppercase">Últimos 3 Dias</span>
+                    <div className="flex items-center gap-3">
+                        <span className="text-[9px] text-zinc-600 tracking-widest uppercase">Últimos 3 Dias</span>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setShowClearConfirm(true)}
+                            className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[9px] uppercase tracking-wider text-zinc-600 border border-zinc-800/50 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/5 transition-all"
+                        >
+                            <Eraser size={10} weight="bold" />
+                            Limpar
+                        </motion.button>
+                    </div>
                 </div>
                 <div className="space-y-2">
                     {historyLog.length === 0 && (
@@ -376,12 +577,123 @@ export const ABigorna = () => {
                 </div>
             </div>
 
-            <div className="mt-6 flex gap-4">
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="forge-btn-primary flex items-center gap-2">
-                    <Plus size={14} weight="bold" />
-                    Nova Disciplina
-                </motion.button>
-            </div>
+
+
+            {/* Add Discipline Modal */}
+            <AnimatePresence>
+                {showAddModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                        onClick={() => setShowAddModal(false)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                            className="glass-panel rounded-xl p-6 w-full max-w-md mx-4 border border-zinc-800/50"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between mb-5">
+                                <div className="flex items-center gap-2">
+                                    <Plus size={16} weight="bold" className="text-[var(--accent)]" />
+                                    <h3 className="text-sm uppercase tracking-[0.15em] font-bold text-white">Nova Disciplina</h3>
+                                </div>
+                                <button
+                                    onClick={() => setShowAddModal(false)}
+                                    className="p-1.5 rounded-md text-zinc-600 hover:text-white hover:bg-white/5 transition-colors"
+                                >
+                                    <X size={14} weight="bold" />
+                                </button>
+                            </div>
+                            <div className="mb-5">
+                                <label className="block text-[10px] text-zinc-500 uppercase tracking-[0.15em] mb-2 font-sans">Nome da Disciplina</label>
+                                <input
+                                    type="text"
+                                    value={newHabitName}
+                                    onChange={(e) => setNewHabitName(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && addHabit()}
+                                    placeholder="Ex: Leitura, Meditação, Exercício..."
+                                    autoFocus
+                                    className="w-full bg-black/40 border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white placeholder-zinc-700 focus:outline-none focus:border-[var(--accent)]/50 focus:ring-1 focus:ring-[var(--accent)]/20 transition-all font-sans tracking-wide"
+                                />
+                            </div>
+                            <div className="flex gap-3 justify-end">
+                                <button
+                                    onClick={() => { setShowAddModal(false); setNewHabitName(''); }}
+                                    className="px-4 py-2 rounded-lg text-[10px] uppercase tracking-widest text-zinc-500 border border-zinc-800/50 hover:text-zinc-300 hover:border-zinc-700 transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={addHabit}
+                                    disabled={!newHabitName.trim() || isAdding}
+                                    className="forge-btn-primary px-5 py-2 text-[10px] uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    {isAdding ? 'Adicionando...' : 'Adicionar'}
+                                </motion.button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Clear History Confirmation Modal */}
+            <AnimatePresence>
+                {showClearConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                        onClick={() => setShowClearConfirm(false)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                            className="glass-panel rounded-xl p-6 w-full max-w-sm mx-4 border border-zinc-800/50"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                                    <Warning size={18} weight="duotone" className="text-red-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-white">Limpar Histórico</h3>
+                                    <p className="text-[10px] text-zinc-500 mt-0.5">Esta ação não pode ser desfeita</p>
+                                </div>
+                            </div>
+                            <p className="text-xs text-zinc-400 mb-5 font-sans leading-relaxed">
+                                Todos os registros de conclusão serão removidos permanentemente. Suas disciplinas serão mantidas.
+                            </p>
+                            <div className="flex gap-3 justify-end">
+                                <button
+                                    onClick={() => setShowClearConfirm(false)}
+                                    className="px-4 py-2 rounded-lg text-[10px] uppercase tracking-widest text-zinc-500 border border-zinc-800/50 hover:text-zinc-300 hover:border-zinc-700 transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={clearHistory}
+                                    disabled={isClearing}
+                                    className="px-5 py-2 rounded-lg text-[10px] uppercase tracking-widest bg-red-500/15 text-red-400 border border-red-500/25 hover:bg-red-500/25 transition-all disabled:opacity-40"
+                                >
+                                    {isClearing ? 'Limpando...' : 'Limpar Tudo'}
+                                </motion.button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 };

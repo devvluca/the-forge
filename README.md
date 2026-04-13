@@ -1,73 +1,51 @@
-# React + TypeScript + Vite
+# ⚒️ The Forge
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Dashboard pessoal de alta performance** — um app desktop construído com Tauri v2, React e Supabase para monitorar disciplinas diárias, finanças e produtividade.
 
-Currently, two official plugins are available:
+> *"Forje-se no fogo da disciplina."*
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 🧭 Módulos
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Rota | Módulo | Descrição |
+|---|---|---|
+| `/a-bigorna` | **A Bigorna** | Tracker de hábitos/disciplinas com grid de conclusão, streaks, gráficos de performance semanal, tendência mensal e histórico recente. |
+| `/o-cofre` | **O Cofre** | Gestão financeira com saldo, receitas, despesas, gráfico de despesas por categoria, projeção de juros compostos, extrato com filtro e registro de novas transações. Protegido por PIN. |
+| `/logos` | **Logos** | Motor de IA (Groq) — assistente inteligente contextual integrado ao dashboard. |
+| `/arsenal` | **Arsenal** | Ferramentas e recursos rápidos. |
+| `/configuracoes` | **Configurações** | Personalização da cor accent do tema e preferências do app. |
 
-## Expanding the ESLint configuration
+## 🧩 Componentes
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Sidebar** — Navegação lateral com ícones e labels
+- **TitleBar** — Barra de título customizada (Tauri)
+- **FloatingDock** — Dock flutuante com atalhos rápidos e acesso ao Jarvis
+- **JarvisSidebar** — Assistente IA lateral (Groq SDK) com contexto da página atual
+- **PinPad** — Teclado numérico para desbloquear O Cofre
+- **WidgetTimer** — Timer Pomodoro flutuante
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🛠️ Stack
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+| Camada | Tecnologia |
+|---|---|
+| Desktop Runtime | [Tauri v2](https://v2.tauri.app) |
+| Frontend | React 19 + TypeScript |
+| Bundler | Vite 8 |
+| Estilo | TailwindCSS 3 |
+| Animações | Framer Motion |
+| Ícones | Phosphor Icons |
+| Gráficos | Recharts |
+| Backend | Supabase (PostgreSQL + Auth) |
+| IA | Groq SDK (LLM) |
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 🎨 Design
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+- Estética **dark mode industrial** com glassmorphism
+- Cor accent customizável (salva em localStorage)
+- Neon glow effects e micro-animações
+- Tipografia monospace + sans-serif
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+---
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+**Built by [@devvluca](https://github.com/devvluca)** ⚒️

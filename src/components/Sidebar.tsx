@@ -35,9 +35,21 @@ export const Sidebar = () => {
                 {/* Top row: Logo + Collapse button */}
                 <div className="px-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 flex items-center justify-center shrink-0">
+                        <motion.div
+                            className="w-9 h-9 flex items-center justify-center shrink-0 cursor-pointer"
+                            whileHover={{
+                                scale: 1.15,
+                                rotate: [0, -8, 8, -4, 0],
+                                filter: 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.6))',
+                            }}
+                            transition={{
+                                scale: { type: 'spring', stiffness: 400, damping: 15 },
+                                rotate: { duration: 0.5, ease: 'easeInOut' },
+                                filter: { duration: 0.2 },
+                            }}
+                        >
                             <img src="/src/assets/theforge_logo.png" alt="The Forge Logo" className="w-full h-full object-contain" />
-                        </div>
+                        </motion.div>
                         <AnimatePresence>
                             {!isCollapsed && (
                                 <motion.div
